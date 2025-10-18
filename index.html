@@ -1,40 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DHT Sensor Web App</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DHT Sensor Web App</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <header>
-    <h1>DHT Sensor Dashboard</h1>
-    <p>Live Temperature & Humidity</p>
-  </header>
+<header>
+  <h1>DHT Sensor Dashboard</h1>
+  <p>Live Temperature & Humidity</p>
+</header>
 
-  <main>
-    <div class="card">
-      <h2>Temperature</h2>
-      <iframe src="https://thingspeak.com/channels/3123407/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line"></iframe>
-    </div>
+<main>
+  <div class="card">
+    <h2>Temperature</h2>
+    <iframe src="https://thingspeak.com/channels/3123407/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line"></iframe>
+  </div>
 
-    <div class="card">
-      <h2>Humidity</h2>
-      <iframe src="https://thingspeak.com/channels/3123407/charts/2?bgcolor=%23ffffff&color=%2300aaff&dynamic=true&results=60&type=line"></iframe>
-    </div>
-  </main>
+  <div class="card">
+    <h2>Humidity</h2>
+    <iframe src="https://thingspeak.com/channels/3123407/charts/2?bgcolor=%23ffffff&color=%2300aaff&dynamic=true&results=60&type=line"></iframe>
+  </div>
 
-  <footer>
-    <p>&copy; 2025 Your Name</p>
-  </footer>
+  <div class="card">
+    <h2>Control</h2>
+    <button class="btn-on" onclick="sendCommand(1)">ON</button>
+    <button class="btn-off" onclick="sendCommand(0)">OFF</button>
+  </div>
+</main>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('Service Worker Registered'))
-      .catch(err => console.log('SW registration failed:', err));
-    }
-  </script>
+<footer>
+  <p>&copy; 2025 Your Name</p>
+</footer>
+
+<script>
+const apiKey = "YOUR_WRITE_API_KEY";
+
+function sendCommand(val){
+  fetch(`https://api.thingspeak.com/update?api_key=${apiKey}&field3=${val}`)
+    .then(res => alert("Command sent!"))
+    .catch(err => alert("Error sending command"));
+}
+</script>
 </body>
 </html>
