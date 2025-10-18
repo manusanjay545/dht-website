@@ -1,21 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>DHT Sensor Data</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DHT Sensor Web App</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Live Temperature & Humidity</h1>
+  <header>
+    <h1>DHT Sensor Dashboard</h1>
+    <p>Live Temperature & Humidity</p>
+  </header>
 
-    <!-- Temperature Chart -->
-    <h2>Temperature</h2>
-    <iframe width="450" height="260" 
-        src="https://thingspeak.com/channels/3123407/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line">
-    </iframe>
+  <main>
+    <div class="card">
+      <h2>Temperature</h2>
+      <iframe src="https://thingspeak.com/channels/3123407/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line"></iframe>
+    </div>
 
-    <!-- Humidity Chart -->
-    <h2>Humidity</h2>
-    <iframe width="450" height="260" 
-        src="https://thingspeak.com/channels/3123407/charts/2?bgcolor=%23ffffff&color=%2300aaff&dynamic=true&results=60&type=line">
-    </iframe>
+    <div class="card">
+      <h2>Humidity</h2>
+      <iframe src="https://thingspeak.com/channels/3123407/charts/2?bgcolor=%23ffffff&color=%2300aaff&dynamic=true&results=60&type=line"></iframe>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Your Name</p>
+  </footer>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('Service Worker Registered'))
+      .catch(err => console.log('SW registration failed:', err));
+    }
+  </script>
 </body>
 </html>
