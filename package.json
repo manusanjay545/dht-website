@@ -1,0 +1,14 @@
+{
+  "name": "webcam-stream-client",
+  "version": "1.0.0",
+  "description": "Webcam Stream Client",
+  "scripts": {
+    "build": "echo 'No build process needed for static site'",
+    "dev": "echo 'No dev server'"
+  },
+  "keywords": ["webcam", "stream", "client"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}
