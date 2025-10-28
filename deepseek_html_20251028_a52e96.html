@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Webcam Stream - Remote Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .video-panel {
+            background: var(--light);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .video-container:hover .video-overlay {
+            opacity: 1;
+        }
+
+        .controls-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .stats-panel {
+            background: var(--light);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-card h3 {
+            color: var(--dark);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .stat-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-2px);
+            background: #f1f5f9;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .connection-status {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .status-connected {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status-disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status-connecting {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .quality-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .quality-btn {
+            padding: 10px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 12px;
+        }
+
+        .quality-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            border-left: 4px solid var(--success);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .connection-info {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .url-display {
+            background: #1e293b;
+            color: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cloud"></i> Cloud Webcam Stream</h1>
+            <p>Real-time remote viewing from anywhere in the world</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="video-panel">
+                <div class="video-container">
+                    <img id="videoFeed" class="video-feed" 
+                         src="" alt="Live Cloud Stream">
+                    
+                    <div class="video-overlay">
+                        <div class="loading-spinner" id="loadingSpinner"></div>
+                        <h3 id="overlayText">Connecting to Cloud Stream...</h3>
+                    </div>
+                </div>
+
+                <div id="connectionStatus" class="connection-status status-connecting">
+                    <i class="fas fa-sync-alt fa-spin"></i> Connecting to cloud server...
+                </div>
+
+                <div class="controls-panel">
+                    <button class="btn btn-success" onclick="takeSnapshot()">
+                        <i class="fas fa-camera"></i> Snapshot
+                    </button>
+                    <button class="btn" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand"></i> Fullscreen
+                    </button>
+                    <button class="btn btn-warning" onclick="refreshStream()">
+                        <i class="fas fa-redo"></i> Refresh
+                    </button>
+                    <button class="btn btn-outline" onclick="toggleStats()">
+                        <i class="fas fa-chart-bar"></i> Toggle Stats
+                    </button>
+                </div>
+
+                <div class="quality-controls">
+                    <button class="quality-btn active" onclick="setQuality('low')">Low Quality</button>
+                    <button class="quality-btn" onclick="setQuality('medium')">Medium Quality</button>
+                    <button class="quality-btn" onclick="setQuality('high')">High Quality</button>
+                </div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <h3><i class="fas fa-chart-line"></i> Stream Statistics</h3>
+                    <div class="stat-grid" id="statsContainer">
+                        <div class="stat-item">
+                            <span class="stat-label">Status:</span>
+                            <span id="statusValue" class="stat-value">Connecting...</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Frames Received:</span>
+                            <span id="framesCount" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Stream Uptime:</span>
+                            <span id="uptime" class="stat-value">0s</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Current FPS:</span>
+                            <span id="fps" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Active Clients:</span>
+                            <span id="clientsCount" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Stream Quality:</span>
+                            <span id="qualityValue" class="stat-value">HD</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-info-circle"></i> Connection Info</h3>
+                    <div class="connection-info">
+                        <p><strong>Server Status:</strong> <span id="serverStatus">Checking...</span></p>
+                        <p><strong>Public URL:</strong></p>
+                        <div class="url-display" id="publicUrl">Fetching...</div>
+                        <button class="btn btn-outline" onclick="copyUrl()" style="width: 100%;">
+                            <i class="fas fa-copy"></i> Copy URL
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-cogs"></i> Stream Controls</h3>
+                    <button class="btn" onclick="toggleAutoRefresh()" style="width: 100%; margin-bottom: 10px;">
+                        <i class="fas fa-sync"></i> <span id="autoRefreshText">Enable Auto-Refresh</span>
+                    </button>
+                    <button class="btn btn-outline" onclick="showConnectionSettings()" style="width: 100%;">
+                        <i class="fas fa-server"></i> Connection Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i> <span id="notificationText">Operation completed successfully</span>
+    </div>
+
+    <script>
+        // Configuration
+        const config = {
+            serverUrl: 'http://localhost:5000', // Change this to your cloud server URL
+            autoRefresh: false,
+            quality: 'high',
+            statsVisible: true
+        };
+
+        // State management
+        let state = {
+            isConnected: false,
+            framesReceived: 0,
+            lastFrameTime: 0,
+            currentFPS: 0,
+            frameCount: 0,
+            statsInterval: null,
+            autoRefreshInterval: null,
+            connectionRetries: 0,
+            maxRetries: 5
+        };
+
+        // DOM Elements
+        const videoFeed = document.getElementById('videoFeed');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const overlayText = document.getElementById('overlayText');
+        const notification = document.getElementById('notification');
+
+        // Initialize the stream
+        function initializeStream() {
+            console.log('🚀 Initializing cloud stream...');
+            connectToStream();
+            startStatsUpdater();
+            
+            if (config.autoRefresh) {
+                enableAutoRefresh();
+            }
+            
+            // Check server status
+            checkServerStatus();
+        }
+
+        // Connect to the video stream
+        function connectToStream() {
+            const streamUrl = `${config.serverUrl}/video`;
+            console.log(`📡 Connecting to: ${streamUrl}`);
+            
+            videoFeed.src = streamUrl;
+            videoFeed.onload = handleStreamConnected;
+            videoFeed.onerror = handleStreamError;
+            videoFeed.onloadstart = handleStreamLoading;
+        }
+
+        // Event handlers
+        function handleStreamConnected() {
+            console.log('✅ Stream connected successfully');
+            state.isConnected = true;
+            state.connectionRetries = 0;
+            
+            connectionStatus.className = 'connection-status status-connected';
+            connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i> Connected to cloud stream';
+            
+            loadingSpinner.style.display = 'none';
+            overlayText.textContent = 'Stream Connected';
+            
+            showNotification('Successfully connected to cloud stream', 'success');
+            
+            // Hide overlay after connection
+            setTimeout(() => {
+                document.querySelector('.video-overlay').style.opacity = '0';
+            }, 2000);
+            
+            // Start FPS calculation
+            startFPSCalculation();
+        }
+
+        function handleStreamError() {
+            console.error('❌ Stream connection failed');
+            state.isConnected = false;
+            
+            connectionStatus.className = 'connection-status status-disconnected';
+            connectionStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Connection failed - Retrying...';
+            
+            loadingSpinner.style.display = 'block';
+            overlayText.textContent = 'Connection Failed - Retrying...';
+            
+            // Retry connection
+            if (state.connectionRetries < state.maxRetries) {
+                state.connectionRetries++;
+                setTimeout(() => {
+                    console.log(`🔄 Retry attempt ${state.connectionRetries}/${state.maxRetries}`);
+                    connectToStream();
+                }, 3000);
+            } else {
+                overlayText.textContent = 'Max retries exceeded. Please check server connection.';
+                showNotification('Failed to connect after multiple attempts', 'error');
+            }
+        }
+
+        function handleStreamLoading() {
+            console.log('🔄 Stream loading...');
+            connectionStatus.className = 'connection-status status-connecting';
+            connectionStatus.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Connecting to cloud server...';
+        }
+
+        // FPS calculation
+        function startFPSCalculation() {
+            videoFeed.onload = function() {
+                state.framesReceived++;
+                state.frameCount++;
+                
+                const now = Date.now();
+                if (now - state.lastFrameTime >= 1000) {
+                    state.currentFPS = state.frameCount;
+                    state.frameCount = 0;
+                    state.lastFrameTime = now;
+                    updateFPSDisplay();
+                }
+            };
+        }
+
+        // Stats updater
+        function startStatsUpdater() {
+            state.statsInterval = setInterval(updateStatistics, 2000);
+        }
+
+        async function updateStatistics() {
+            try {
+                const response = await fetch(`${config.serverUrl}/stats`);
+                const data = await response.json();
+                
+                document.getElementById('framesCount').textContent = data.frames_captured;
+                document.getElementById('uptime').textContent = Math.round(data.uptime) + 's';
+                document.getElementById('fps').textContent = data.fps.toFixed(1);
+                document.getElementById('clientsCount').textContent = data.clients_connected;
+                document.getElementById('qualityValue').textContent = data.stream_quality;
+                document.getElementById('statusValue').textContent = 'Connected';
+                
+                if (data.public_url) {
+                    document.getElementById('publicUrl').textContent = data.public_url;
+                    document.getElementById('serverStatus').textContent = 'Online (Public)';
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                document.getElementById('statusValue').textContent = 'Disconnected';
+                document.getElementById('serverStatus').textContent = 'Offline';
+            }
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${config.serverUrl}/info`);
+                const data = await response.json();
+                
+                if (data.public_url) {
+                    document.getElementById('publicUrl').textContent = data.public_url;
+                    config.serverUrl = data.public_url; // Update to use public URL
+                    showNotification('Using public cloud URL', 'info');
+                }
+            } catch (error) {
+                console.log('Using local server URL');
+            }
+        }
+
+        // Control functions
+        function takeSnapshot() {
+            window.open(`${config.serverUrl}/snapshot?t=${Date.now()}`, '_blank');
+            showNotification('Snapshot captured', 'success');
+        }
+
+        function toggleFullscreen() {
+            const videoContainer = document.querySelector('.video-container');
+            
+            if (!document.fullscreenElement) {
+                videoContainer.requestFullscreen().catch(err => {
+                    console.log(`Fullscreen error: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function refreshStream() {
+            videoFeed.src = `${config.serverUrl}/video?t=${Date.now()}`;
+            showNotification('Stream refreshed', 'info');
+        }
+
+        function toggleStats() {
+            const statsContainer = document.getElementById('statsContainer');
+            config.statsVisible = !config.statsVisible;
+            statsContainer.style.display = config.statsVisible ? 'block' : 'none';
+            showNotification(`Statistics ${config.statsVisible ? 'enabled' : 'disabled'}`, 'info');
+        }
+
+        function setQuality(quality) {
+            config.quality = quality;
+            
+            // Update UI
+            document.querySelectorAll('.quality-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // In a real implementation, you'd send this to the server
+            showNotification(`Stream quality set to ${quality}`, 'info');
+        }
+
+        function toggleAutoRefresh() {
+            config.autoRefresh = !config.autoRefresh;
+            const buttonText = document.getElementById('autoRefreshText');
+            
+            if (config.autoRefresh) {
+                enableAutoRefresh();
+                buttonText.textContent = 'Disable Auto-Refresh';
+                showNotification('Auto-refresh enabled', 'success');
+            } else {
+                disableAutoRefresh();
+                buttonText.textContent = 'Enable Auto-Refresh';
+                showNotification('Auto-refresh disabled', 'info');
+            }
+        }
+
+        function enableAutoRefresh() {
+            state.autoRefreshInterval = setInterval(refreshStream, 30000); // 30 seconds
+        }
+
+        function disableAutoRefresh() {
+            if (state.autoRefreshInterval) {
+                clearInterval(state.autoRefreshInterval);
+                state.autoRefreshInterval = null;
+            }
+        }
+
+        function copyUrl() {
+            const url = document.getElementById('publicUrl').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('URL copied to clipboard', 'success');
+            });
+        }
+
+        function showConnectionSettings() {
+            const newUrl = prompt('Enter server URL:', config.serverUrl);
+            if (newUrl) {
+                config.serverUrl = newUrl;
+                showNotification(`Server URL updated to: ${newUrl}`, 'info');
+                refreshStream();
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notificationText = document.getElementById('notificationText');
+            notificationText.textContent = message;
+            
+            // Set color based on type
+            const colors = {
+                success: '#10b981',
+                error: '#ef4444', 
+                info: '#3b82f6',
+                warning: '#f59e0b'
+            };
+            
+            notification.style.borderLeftColor = colors[type] || colors.info;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateFPSDisplay() {
+            document.getElementById('fps').textContent = state.currentFPS;
+        }
+
+        // Event listeners
+        document.addEventListener('fullscreenchange', function() {
+            const fullscreenBtn = document.querySelector('[onclick="toggleFullscreen()"]');
+            const icon = fullscreenBtn.querySelector('i');
+            
+            if (document.fullscreenElement) {
+                icon.className = 'fas fa-compress';
+                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i> Exit Fullscreen';
+            } else {
+                icon.className = 'fas fa-expand';
+                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+            }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeStream);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (state.statsInterval) clearInterval(state.statsInterval);
+            if (state.autoRefreshInterval) clearInterval(state.autoRefreshInterval);
+        });
+    </script>
+</body>
+</html>
