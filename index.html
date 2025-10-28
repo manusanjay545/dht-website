@@ -1,58 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DHT11 + Send Message</title>
-<style>
-  body { font-family: Arial; background: #1e1e1e; color: #fff; text-align:center; padding:50px;}
-  input[type=text] { padding:10px; width:300px; border-radius:5px; border:none; margin-right:10px; font-size:16px; }
-  button { padding:10px 20px; font-size:16px; border:none; border-radius:5px; cursor:pointer; }
-  #data { margin-top:30px; font-size:22px;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Webcam Stream</title>
+    <script>
+        // Get server URL from environment variable or use default
+        const SERVER_URL = '<%= process.env.SERVER_URL || "http://localhost:5000" %>';
+    </script>
+    <style>
+        /* Your CSS styles here */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; 
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+        }
+        .video-container {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .video-feed {
+            width: 100%;
+            max-width: 800px;
+            border-radius: 15px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Cloud Webcam Stream</h1>
+            <p>Live streaming from anywhere in the world</p>
+        </div>
+        
+        <div class="video-container">
+            <img id="videoFeed" class="video-feed" 
+                 src="" alt="Live Stream" 
+                 onerror="handleStreamError()">
+            
+            <div id="status" style="padding: 15px; margin: 15px 0; border-radius: 10px; background: #f8f9fa;">
+                🔄 Connecting to stream...
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="refreshStream()">🔄 Refresh Stream</button>
+                <button class="btn" onclick="takeSnapshot()">📸 Take Snapshot</button>
+                <button class="btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+            </div>
+            
+            <div id="serverInfo" style="margin-top: 20px; padding: 15px; background: #f1f5f9; border-radius: 10px;">
+                <strong>Server Status:</strong> <span id="serverStatus">Checking...</span>
+            </div>
+        </div>
+    </div>
 
-<h1>DHT11 Sensor & Send Message</h1>
+    <script>
+        // Configuration
+        const config = {
+            serverUrl: SERVER_URL,
+            autoRefresh: true,
+            retryCount: 0,
+            maxRetries: 5
+        };
 
-<input type="text" id="message" placeholder="Type a message">
-<button id="sendMsg">Send</button>
+        // Initialize stream
+        function initializeStream() {
+            console.log('🚀 Initializing stream from:', config.serverUrl);
+            connectToStream();
+            
+            // Check server status
+            checkServerStatus();
+            
+            // Auto-refresh every 30 seconds
+            if (config.autoRefresh) {
+                setInterval(refreshStream, 30000);
+            }
+        }
 
-<div id="data">
-  <p>Temperature: <span id="temp">--</span> °C</p>
-  <p>Humidity: <span id="hum">--</span> %</p>
-</div>
+        // Connect to video stream
+        function connectToStream() {
+            const videoFeed = document.getElementById('videoFeed');
+            const status = document.getElementById('status');
+            
+            const streamUrl = `${config.serverUrl}/video`;
+            console.log('📡 Connecting to:', streamUrl);
+            
+            videoFeed.src = streamUrl;
+            videoFeed.onload = () => {
+                status.innerHTML = '✅ Connected to stream';
+                status.style.background = '#d1fae5';
+                status.style.color = '#065f46';
+                config.retryCount = 0;
+            };
+            
+            videoFeed.onerror = () => {
+                config.retryCount++;
+                if (config.retryCount <= config.maxRetries) {
+                    status.innerHTML = `❌ Connection failed - Retrying (${config.retryCount}/${config.maxRetries})`;
+                    status.style.background = '#fef3c7';
+                    status.style.color = '#92400e';
+                    
+                    setTimeout(() => {
+                        videoFeed.src = streamUrl + '?t=' + Date.now();
+                    }, 2000);
+                } else {
+                    status.innerHTML = '❌ Failed to connect after multiple attempts';
+                    status.style.background = '#fee2e2';
+                    status.style.color = '#991b1b';
+                }
+            };
+        }
 
-<script>
-const writeKey = "OPDHX758K8LI4ZJW"; 
-const channelID = "3123407";
+        // Check server status
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${config.serverUrl}/info`);
+                const data = await response.json();
+                document.getElementById('serverStatus').textContent = 'Online ✅';
+                document.getElementById('serverInfo').innerHTML += 
+                    `<br><strong>Public URL:</strong> ${data.public_url || config.serverUrl}`;
+            } catch (error) {
+                document.getElementById('serverStatus').textContent = 'Offline ❌';
+                console.error('Server status check failed:', error);
+            }
+        }
 
-document.getElementById("sendMsg").onclick = sendMessage;
+        // Control functions
+        function refreshStream() {
+            const videoFeed = document.getElementById('videoFeed');
+            videoFeed.src = `${config.serverUrl}/video?t=${Date.now()}`;
+            
+            const status = document.getElementById('status');
+            status.innerHTML = '🔄 Refreshing stream...';
+            status.style.background = '#fef3c7';
+            status.style.color = '#92400e';
+        }
 
-function sendMessage(){
-  const msg = document.getElementById("message").value;
-  if(msg.trim() == "") return;
-  fetch(`https://api.thingspeak.com/update?api_key=${writeKey}&field4=${encodeURIComponent(msg)}`)
-  .then(res => console.log("Message sent: " + msg))
-  .catch(err => console.log(err));
-  document.getElementById("message").value = "";
-}
+        function takeSnapshot() {
+            window.open(`${config.serverUrl}/snapshot?t=${Date.now()}`, '_blank');
+        }
 
-// Fetch DHT data every 5 seconds
-function getData(){
-  fetch(`https://api.thingspeak.com/channels/${channelID}/fields/1.json?results=1`)
-  .then(res=>res.json())
-  .then(data=>{
-    if(data.feeds && data.feeds.length>0){
-      document.getElementById("temp").innerText = data.feeds[0].field1 || "--";
-      document.getElementById("hum").innerText = data.feeds[0].field2 || "--";
-    }
-  }).catch(err=>console.log(err));
-}
+        function toggleFullscreen() {
+            const videoFeed = document.getElementById('videoFeed');
+            if (!document.fullscreenElement) {
+                videoFeed.requestFullscreen().catch(err => {
+                    console.log('Fullscreen error:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
 
-setInterval(getData,5000);
-getData();
-</script>
+        function handleStreamError() {
+            const status = document.getElementById('status');
+            status.innerHTML = '❌ Stream connection lost';
+            status.style.background = '#fee2e2';
+            status.style.color = '#991b1b';
+        }
 
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeStream);
+    </script>
 </body>
 </html>
